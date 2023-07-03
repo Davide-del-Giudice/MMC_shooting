@@ -1,0 +1,117 @@
+module ULTC(vp,vq,tap);
+input vp,vq;
+output tap;
+
+electrical vp,vq;
+electrical tap;
+
+parameter real    TAP  = 1.0;
+parameter real    BAND = 0.05*2; // +/- 5% amplitude of the regulation band.
+parameter real    TW   = 30 alterable;
+parameter real    TC   = 1u;
+parameter real    STEP = BAND/(33*2);
+parameter integer OFF  = 0 alterable; // 'OFF=true' means that the ULTC is off.
+parameter integer DBG  = 0 alterable;
+
+real Vmag, TstartUp, TstartLow, Tap;
+real Vup, Vlo;
+integer Upper, Lower;
+
+analog begin
+
+    @( initial_model ) begin
+	if( analysis("restart") ) begin
+	    Tap   = TAP;
+	    Upper = 0;
+	    Lower = 0;
+	    if( DBG )
+		$display("Initial model\n");
+	end
+    end
+
+    if( analysis( "dc" ) ) begin
+	Vmag = max( 10k, sqrt( v(vp)*v(vp) + v(vq)*v(vq) ) );
+	Vup   = (Tap+STEP) * Vmag;
+	Vlo   = (Tap-STEP) * Vmag;
+    end
+    else if( analysis( "tran" ) ) 
+	Vmag = max( 10k, sqrt( v(vp)*v(vp) + v(vq)*v(vq) ) );
+
+    @( initial_step ) begin
+	if( analysis("restart") ) begin
+	    Tap   = TAP;
+	    Upper = 0;
+	    Lower = 0;
+
+	    Vup   = (Tap+STEP) * Vmag;
+	    Vlo   = (Tap-STEP) * Vmag;
+	end
+
+	if( DBG )
+	    $display("Initial step -- Tap %e\n", Tap);
+    end
+
+    if( analysis( "tran" ) ) begin
+	if( OFF == 0 ) begin
+	    if( Upper == 0 )
+		@( cross( Vmag - Vup*(1+1m), +1, TC ) ) begin
+		    TstartUp = $abstime;
+		    Upper  = 1;
+		    if( DBG )
+			$display( "Up %d -- time %e\n", Upper, $abstime );
+		end
+
+	    if( Upper == 1 )
+		@( cross( Vmag - Vup*(1-1m), -1, TC ) ) begin
+		    Upper = 0;
+		    if( DBG )
+			$display( "Up %d -- time %e\n", Upper, $abstime );
+		end
+
+	    if( Lower == 0 )
+		@( cross( Vmag - Vlo*(1-1m), -1, TC ) ) begin
+		    TstartLow = $abstime;
+		    Lower  = 1;
+		    if( DBG )
+			$display( "Lw %d -- time %e\n", Lower, $abstime );
+		end
+
+	    if( Lower == 1 )
+		@( cross( Vmag - Vlo*(1+1m), +1, TC ) ) begin
+		    Lower = 0;
+		    if( DBG )
+			$display( "Lw %d -- time %e\n", Lower, $abstime );
+		end
+
+	    if( Upper == 1 ) begin
+		if( $abstime > TstartUp + TW ) begin
+		    if( Vmag > Vup ) begin
+			Tap = Tap + STEP;
+			if( DBG )
+			    $display( "UpTap %d -- time %e\n", Tap, $abstime );
+		    end
+
+		    TstartUp = $abstime;
+
+		end
+	    end
+
+	    if( Lower == 1 ) begin
+		if( $abstime > TstartLow + TW ) begin
+		    if( Vmag < Vlo ) begin
+			Tap = Tap - STEP;
+			if( DBG )
+			    $display( "DwTap %d -- time %e\n", Tap, $abstime );
+		    end
+
+		    TstartLow = $abstime;
+		end
+	    end
+	end
+    end
+
+    v(tap) <+ Tap;
+    
+end
+
+endmodule

@@ -1,0 +1,162 @@
+		// SORT SM CAPACITOR VOLTAGES
+		Go = 1;
+
+		while(Go == 1) begin
+			Go = 0;
+			for(I = 1; I < LEVELS; I = I + 1) begin
+				if(v_cap_previous[idx_v_cap[I]] > v_cap_previous[idx_v_cap[I+1]]) begin
+					TmpI           = idx_v_cap[I];
+					idx_v_cap[I]   = idx_v_cap[I+1];
+					idx_v_cap[I+1] = TmpI;
+					Go             = 1;
+				end
+			end
+		end
+		
+		if(driver_diff>0) begin // ONE BYPASSED SM NEEDS TO BE INSERTED
+			K  = 0;
+			if(i(pos,neg)>=0) begin // INSERT THE BYPASSED SM WITH LOWEST V
+				for (I = 1; I <= LEVELS; I = I+1) begin
+					if(gate[idx_v_cap[I]] == 0) begin
+						gate[idx_v_cap[I]] = 1;
+						K = K + 1;
+				        end
+
+					if(K == abs(driver_diff)) begin
+						break;
+					end
+
+
+				end
+			end else begin // INSERT THE BYPASSED SM WITH HIGHEST V
+				for (I = LEVELS; I >= 1; I = I-1) begin
+					if(gate[idx_v_cap[I]] == 0) begin
+						gate[idx_v_cap[I]] = 1;
+						K = K + 1;
+					end
+
+					if(K == abs(driver_diff)) begin
+						break;
+					end
+
+
+				end
+			end
+		end else begin // ONE INSERTED SM NEEDS TO BE BYPASSED
+			K  = 0;
+			if(i(pos,neg)>=0) begin // BYPASS THE INSERTED SM WITH HIGHEST V
+				for (I = LEVELS; I >= 1; I = I-1) begin
+					if(gate[idx_v_cap[I]] == 1) begin
+						gate[idx_v_cap[I]] = 0;
+						K = K + 1;
+					end
+
+					if(K == abs(driver_diff)) begin
+						break;
+					end
+
+				end
+
+			end else begin // BYPASS THE INSERTED SM WITH LOWEST V
+				for (I = 1; I <= LEVELS; I = I+1) begin
+					if(gate[idx_v_cap[I]] == 1) begin
+						gate[idx_v_cap[I]] = 0;
+						K = K + 1;
+					end 	
+					
+					if(K == abs(driver_diff)) begin
+						break;
+					end
+
+				end
+			end
+		end
+
+		// EXECUTE SWAP
+		// AT EACH CROSS, ADDITIONAL SMs (DIFFERENT FROM THOSE OF STANDARD CAPACITOR
+		// VOLTAGE BALANCING) CHANGE THEIR GATE SIGNALS.
+
+
+		// FIGURES OUT HOW MANY ELEMENTS CAN BE USED FOR ADDITIONAL BALANCING
+		// The maximum number of elements that can be swap MAX_SORT is the maximum
+		// among a predefined value KMAX and the inserted and bypassed SM at that
+		// time (i.e., NIn and NBy) 
+		
+		NIn = round(v(driver));
+		NBy =  LEVELS - NIn;
+
+ 
+		MAX_SORT = KMAX; 
+		
+		if (MAX_SORT > NIn) begin
+			MAX_SORT = NIn;	  	
+			if ( NIn > NBy ) begin
+				MAX_SORT = NBy;
+			end
+		end else begin
+			if (MAX_SORT > NBy) begin
+				MAX_SORT = NBy;
+			end
+		end
+
+
+		if (MAX_SORT != 0) begin
+			K = 1;
+	
+			if( i(pos,neg) > 0 ) begin
+				for( I = LEVELS; I >= 1; I = I-1 ) begin  // Largest on --> off
+					if( gate[idx_v_cap[I]] == 1) begin
+						gate[idx_v_cap[I]] = 0;
+				
+						K = K + 1;
+	
+						if (K >= MAX_SORT) begin
+						break;
+						end
+	  				end
+				end
+
+				K = 1;
+		
+				for( I = 1; I <= LEVELS; I = I + 1 ) begin  // Smallest off --> on
+			 		if( gate[idx_v_cap[I]] == 0) begin
+						gate[idx_v_cap[I]] = 1;
+						
+						K = K + 1;
+
+						if (K >= MAX_SORT) begin
+						break;
+						end
+		      			end
+				end
+											
+			end else begin
+
+				for( I = 1; I <= LEVELS; I = I + 1 ) begin  // Smallest on --> off
+					if(gate[idx_v_cap[I]] == 1) begin
+						gate[idx_v_cap[I]] = 0;
+						K = K + 1;
+
+						if (K >= MAX_SORT) begin
+						break;
+						end
+					end
+				end
+
+				K = 1;
+		
+		
+				for( I = LEVELS; I > 0; I = I - 1 ) begin  // Largest off --> on
+					if(gate[idx_v_cap[I]] == 0) begin
+						gate[idx_v_cap[I]] = 1;
+						K = K + 1;
+
+						if (K >= MAX_SORT) begin
+						break;
+						end
+		      			end
+				end
+
+			end
+		end
+	

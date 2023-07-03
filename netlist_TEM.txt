@@ -1,0 +1,87 @@
+parameters LEVELS = 127 BITS = 7 
+parameters R_ARM  = 1.31m 
+parameters L_ARM  = 29m 
+parameters C_SM   = (10m)*127/200 
+parameters idx    = 1 
+ 
+/////////////////// 
+/////////////////// 
+; Main netlist 
+/////////////////// 
+/////////////////// 
+
+/////////////////// 
+; For initialisation purposes 
+/////////////////// 
+
+VCap_up_a cap_up_a gnd capacitor c=1 
+VCap_dw_a cap_dw_a gnd capacitor c=1 
+VCap_up_b cap_up_b gnd capacitor c=1 
+VCap_dw_b cap_dw_b gnd capacitor c=1 
+VCap_up_c cap_up_c gnd capacitor c=1 
+VCap_dw_c cap_dw_c gnd capacitor c=1 
+
+/////////////////// 
+; Phase leg a 
+/////////////////// 
+
+Ad1_a drv_up_a gnd a2d dignet=sprintf("MMC_%d.phase_a.up_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad2_a drv_up_a gnd a2d dignet=sprintf("MMC_%d.phase_a.up_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad3_a drv_dw_a gnd a2d dignet=sprintf("MMC_%d.phase_a.dw_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad4_a drv_dw_a gnd a2d dignet=sprintf("MMC_%d.phase_a.dw_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad5_a drv_up_a gnd a2d dignet=sprintf("MMC_%d.phase_a.drv_up",idx) nl=128 vl=0 vh=1 trtime="digital" 
+Ad6_a drv_dw_a gnd a2d dignet=sprintf("MMC_%d.phase_a.drv_dw",idx) nl=128 vl=0 vh=1 trtime="digital" 
+ 
+Da1_a up_a gnd d2a dignet=sprintf("MMC_%d.phase_a.up",idx) vl=0 vh=127 trtime="digital" 
+Da2_a dw_a gnd d2a dignet=sprintf("MMC_%d.phase_a.dw",idx) vl=0 vh=127 trtime="digital" 
+ 
+Arm_up_a dc_pos midp_a up_a cap_up_a MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+Lop_a midp_a outp_a inductor l=L_ARM 
+Rop_a outp_a a1  resistor r=R_ARM 
+Ron_a outn_a a1 resistor  r=R_ARM 
+Lon_a midn_a outn_a inductor l=L_ARM 
+Arm_dw_a midn_a dc_neg dw_a cap_dw_a MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+ 
+/////////////////// 
+; Phase leg b 
+/////////////////// 
+
+Ad1_b drv_up_b gnd a2d dignet=sprintf("MMC_%d.phase_b.up_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad2_b drv_up_b gnd a2d dignet=sprintf("MMC_%d.phase_b.up_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad3_b drv_dw_b gnd a2d dignet=sprintf("MMC_%d.phase_b.dw_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad4_b drv_dw_b gnd a2d dignet=sprintf("MMC_%d.phase_b.dw_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad5_b drv_up_b gnd a2d dignet=sprintf("MMC_%d.phase_b.drv_up",idx) nl=128 vl=0 vh=1 trtime="digital" 
+Ad6_b drv_dw_b gnd a2d dignet=sprintf("MMC_%d.phase_b.drv_dw",idx) nl=128 vl=0 vh=1 trtime="digital" 
+ 
+Da1_b up_b gnd d2a dignet=sprintf("MMC_%d.phase_b.up",idx) vl=0 vh=127 trtime="digital" 
+Da2_b dw_b gnd d2a dignet=sprintf("MMC_%d.phase_b.dw",idx) vl=0 vh=127 trtime="digital" 
+ 
+Arm_up_b dc_pos midp_b up_b cap_up_b MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+Lop_b midp_b outp_b inductor l=L_ARM 
+Rop_b outp_b b1  resistor r=R_ARM 
+Ron_b outn_b b1 resistor  r=R_ARM 
+Lon_b midn_b outn_b inductor l=L_ARM 
+Arm_dw_b midn_b dc_neg dw_b cap_dw_b MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+ 
+/////////////////// 
+; Phase leg c 
+/////////////////// 
+
+Ad1_c drv_up_c gnd a2d dignet=sprintf("MMC_%d.phase_c.up_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad2_c drv_up_c gnd a2d dignet=sprintf("MMC_%d.phase_c.up_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad3_c drv_dw_c gnd a2d dignet=sprintf("MMC_%d.phase_c.dw_upshift",idx) vl= -1.968504e-03 vh=9.980315e-01 bits=[6,0] trtime="digital" 
+Ad4_c drv_dw_c gnd a2d dignet=sprintf("MMC_%d.phase_c.dw_dwshift",idx) vl= -5.905512e-03 vh=9.940945e-01 bits=[6,0] trtime="digital" 
+Ad5_c drv_up_c gnd a2d dignet=sprintf("MMC_%d.phase_c.drv_up",idx) nl=128 vl=0 vh=1 trtime="digital" 
+Ad6_c drv_dw_c gnd a2d dignet=sprintf("MMC_%d.phase_c.drv_dw",idx) nl=128 vl=0 vh=1 trtime="digital" 
+ 
+Da1_c up_c gnd d2a dignet=sprintf("MMC_%d.phase_c.up",idx) vl=0 vh=127 trtime="digital" 
+Da2_c dw_c gnd d2a dignet=sprintf("MMC_%d.phase_c.dw",idx) vl=0 vh=127 trtime="digital" 
+ 
+Arm_up_c dc_pos midp_c up_c cap_up_c MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+Lop_c midp_c outp_c inductor l=L_ARM 
+Rop_c outp_c c1  resistor r=R_ARM 
+Ron_c outn_c c1 resistor  r=R_ARM 
+Lon_c midn_c outn_c inductor l=L_ARM 
+Arm_dw_c midn_c dc_neg dw_c cap_dw_c MMC_ARM C_SM=C_SM LEVELS=127 BASIC_SORT=BASIC_SORT SWAP=SWAP INIT=INIT 
+ 
+

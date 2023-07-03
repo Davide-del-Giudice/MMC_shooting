@@ -1,0 +1,24 @@
+module DRV_GEN(up_a,up_b,up_c,dw_a,dw_b,dw_c,drv_up_a,drv_up_b,drv_up_c,drv_dw_a,drv_dw_b,drv_dw_c);
+
+input  drv_up_a,drv_up_b,drv_up_c,drv_dw_a,drv_dw_b,drv_dw_c;
+output up_a,up_b,up_c,dw_a,dw_b,dw_c;
+
+electrical up_a,up_b,up_c,dw_a,dw_b,dw_c,drv_up_a,drv_up_b,drv_up_c,drv_dw_a,drv_dw_b,drv_dw_c;
+
+parameter real LEVELS = 31   alterable;
+
+analog begin
+
+v(up_a) <+  round(v(drv_up_a)*LEVELS);
+v(up_b) <+  round(v(drv_up_b)*LEVELS);
+v(up_c) <+  round(v(drv_up_c)*LEVELS);
+v(dw_a) <+  round(v(drv_dw_a)*LEVELS);
+v(dw_b) <+  round(v(drv_dw_b)*LEVELS);
+v(dw_c) <+  round(v(drv_dw_c)*LEVELS);
+
+
+end
+
+endmodule
+
+

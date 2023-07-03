@@ -1,0 +1,32 @@
+
+		// SORT SM CAPACITOR VOLTAGES
+		Go = 1;
+
+		while(Go == 1) begin
+			Go = 0;
+			for(I = 1; I < LEVELS; I = I + 1) begin
+				if(v_cap_previous[idx_v_cap[I]] > v_cap_previous[idx_v_cap[I+1]]) begin
+					TmpI           = idx_v_cap[I];
+					idx_v_cap[I]   = idx_v_cap[I+1];
+					idx_v_cap[I+1] = TmpI;
+					Go             = 1;
+				end
+			end
+		end
+		
+		// RESET GATES
+		for (I = 1; I <= LEVELS; I = I + 1) begin
+			gate[I] = 0;
+		end
+
+		if(i(pos,neg)>=0) begin
+			for (I = 1; I <= driver_previous; I = I+1) begin
+				gate[idx_v_cap[I]] = 1;
+			end
+		end else begin 
+			for (I = LEVELS; I >= LEVELS - driver_previous + 1; I = I-1) begin
+				gate[idx_v_cap[I]] = 1;
+			end
+		end
+
+

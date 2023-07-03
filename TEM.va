@@ -1,0 +1,172 @@
+module MMC_ARM(pos,neg,driver,vcap_init);
+inout pos,neg;
+input driver;
+input vcap_init;
+
+electrical pos,neg,driver,vcap_init;
+
+// PARAMETERS
+parameter integer LEVELS    = 31	 alterable;	// Number of submodules in each arm
+parameter real    VDC_NOM   = 400k	 alterable;	// Nominal MMC pole-to-pole voltage
+parameter real    R_ON      = 1.361m	 alterable;     // On-state  switch resistance
+parameter real    R_OFF     = 1M         alterable;	// Off-state switch resistance
+parameter real    C_SM      = 10m*31/200 alterable;	// Submodule (SM) capacitance. 
+parameter real    T_CROSS   = 10n*0.01    alterable;
+parameter integer KMAX      = 10         alterable;     // Maximum # of SMs that can be swapped
+parameter integer INIT      = 0          alterable;     // if 1 simulations starts from shooting (i.e., initialization), 0 otherwise. 
+
+// FLAGS DESCRIBING WHICH CBA IS ADOPTED (ONLY ONE AT A TIME CAN BE ONE)
+parameter integer BASIC_SORT = 0          alterable;    // only one SM can change its gate signals at threshold crossing.
+parameter integer SWAP       = 0          alterable;    // compared to BASIC_SORT, it also includes swapping of an arbitrary number of SMs. 
+
+// SPECIFIC VARIABLES OF EACH SM
+real    v_cap_previous[1:LEVELS]; 			// capacitor voltage at previous time step
+real    v_cap_current[1:LEVELS];			// capacitor voltage at current time step
+real    i_cap[1:LEVELS];				// capacitor current at current time step
+integer gate[1:LEVELS];					// gate signal of switch inserting C_SM
+integer idx_v_cap[1:LEVELS];		        	// array ordering capacitor voltages
+real    r_c[1:LEVELS];					// resistance of switch inserting  C_SM
+real    r_b[1:LEVELS];					// resistance of switch bypassing  C_SM
+real    r_eq;						// capacitor resistance (companion model)
+real    r_sm[1:LEVELS];					// Thevenin equivalent SM resistance
+real    v_sm[1:LEVELS];					// Thevenin equivalent SM voltage
+real    r_arm;						// Thevenin equivalent arm resistance
+real    v_arm;						// Thevenin equivalent arm voltage
+real    i_arm;						// Arm current
+
+// OTHER VARIABLES
+real    prevtime; 					// Identifies time at previous time step
+real    step;	 					// Identifies step in driver (rising, falling)
+integer driver_previous; 
+integer driver_diff;
+integer NIn;
+integer NBy;
+integer TmpI;
+integer MAX_SORT;
+genvar  I;
+genvar  Go;
+genvar  K;
+
+analog begin
+	
+// ----------------------------------------------------------
+// INITIALIZATION OF SOME VARIABLES
+// ----------------------------------------------------------
+
+        if( analysis("dc") ) begin
+
+	    prevtime = $prevtime;
+	
+	    for(I = 1; I <= LEVELS; I = I + 1) begin
+		if(INIT == 1) 
+//	    	  v_cap_previous[I] = v(vcap_init)*LEVELS/(LEVELS-1);
+	    	  v_cap_previous[I] = v(vcap_init);
+		else 
+		    v_cap_previous[I] = VDC_NOM/LEVELS;	
+
+		v_cap_current[I]  = v_cap_previous[I];
+			
+	   	gate[I]           = 0;
+	   	idx_v_cap[I]      = I;
+	    end
+		
+	    driver_previous = round( v(driver) ); 
+
+	    for(I = 1; I<= driver_previous; I = I + 1)
+		gate[I] = 1;
+
+	    for(I = 1; I<= LEVELS; I = I + 1) begin
+		r_c[I] = R_ON*gate[I]     + R_OFF*(1-gate[I]);
+		r_b[I] = R_ON*(1-gate[I]) + R_OFF*gate[I];
+	    end
+	    
+	    r_arm = 0;
+	    v_arm = 0;
+	    r_eq = $timestep/C_SM;
+
+	    for(I = 1; I<= LEVELS; I = I + 1) begin
+			r_sm[I] = r_b[I]*(r_c[I] + r_eq)/(r_b[I] + r_c[I] + r_eq);
+			v_sm[I] = v_cap_previous[I]*r_b[I]/(r_b[I] + r_c[I] + r_eq);
+			
+			// RETRIEVE THEVENIN EQUIVALENT CIRCUIT OF OVERALL ARM
+			r_arm = r_arm + r_sm[I];
+			v_arm = v_arm + v_sm[I];
+		end
+			
+		// REPLACE CASCADED CONNECTION OF SMs IN ONE ARM WITH THEVENIN EQUIVALENT
+		v(pos,neg) <+ r_arm*i(pos,neg) + v_arm;
+	
+	end
+	// ----------------------------------------------------------
+	// END OF INITIALIZATION
+	// ----------------------------------------------------------
+
+	@(new_step) begin
+		for(I = 1; I<= LEVELS; I = I + 1) begin
+		v_cap_previous[I] = v_cap_current[I];
+		end	
+	end
+
+	// ---------------------------------------------------------
+	// BEGINNING OF CROSS
+	// DETERMINE IF DRIVING SIGNAL HAS CHANGED (DISCRETE CHANGE)
+	// ---------------------------------------------------------
+	
+	@(cross( v(driver) - (driver_previous + 0.1), 1,T_CROSS) or 
+	  cross( v(driver) - (driver_previous - 0.1),-1,T_CROSS) ) begin
+
+	
+                driver_diff = round(v(driver) - (driver_previous));
+		driver_previous = round( v(driver) );
+         	
+		// IF A CHANGE OCCURRED, GATE SIGNALS MUST BE CHANGED.
+		// CAPACITOR VOLTAGE BALANCING ALGORITHM (CBA) MUST BE EXECUTED.
+
+		if(BASIC_SORT == 1) begin 	
+			`include "basic_sort.txt"
+		end
+
+		if(SWAP == 1) begin 	
+			`include "swap.txt"
+		end
+
+		// UPDATE RESISTANCE OF GATE VALVES
+		for( I = 1; I <= LEVELS; I = I+1) begin
+			r_c[I] = R_ON*gate[I]     + R_OFF*(1-gate[I]);
+			r_b[I] = R_ON*(1-gate[I]) + R_OFF*gate[I];
+		end
+ 
+	end
+
+	// ---------------------------------------------------------
+	// END OF CROSS
+	// DETERMINE IF DRIVING SIGNAL HAS CHANGED (DISCRETE CHANGE)
+	// ---------------------------------------------------------
+
+	// RETRIEVE SWITCH RESISTANCES OF EACH SM BASED ON GATE SIGNALS
+	r_eq = $timestep/C_SM;
+
+	for(I = 1; I<= LEVELS; I = I + 1) begin
+		// COMPUTE CAPACITOR CURRENT AND VOLTAGE
+		i_cap[I] = (r_b[I]*i(pos,neg) - v_cap_previous[I])/(r_b[I]+r_c[I]+r_eq);
+		v_cap_current[I] = v_cap_previous[I] + r_eq*i_cap[I];
+	end
+
+	// RETRIEVE THEVENIN EQUIVALENT CIRCUIT OF EACH SM
+	r_arm = 0;
+	v_arm = 0;
+
+	for(I = 1; I<= LEVELS; I = I + 1) begin
+		r_sm[I] = r_b[I]*(r_c[I] + r_eq)/(r_b[I] + r_c[I] + r_eq);
+		v_sm[I] = v_cap_previous[I]*r_b[I]/(r_b[I] + r_c[I] + r_eq);
+	
+		// RETRIEVE THEVENIN EQUIVALENT CIRCUIT OF OVERALL ARM
+		r_arm = r_arm + r_sm[I];
+		v_arm = v_arm + v_sm[I];
+	end
+
+	// REPLACE CASCADED CONNECTION OF SMs IN ONE ARM WITH THEVENIN EQUIVALENT
+	v(pos,neg) <+ r_arm*i(pos,neg) + v_arm;
+end
+
+endmodule

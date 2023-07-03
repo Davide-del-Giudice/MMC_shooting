@@ -1,0 +1,28 @@
+module ABCDQ0(xd,xq,xa,xb,xc,teta);
+output xd,xq;
+input xa,xb,xc,teta;
+
+electrical xd,xq;
+electrical xa,xb,xc,teta;
+
+parameter real GAIN = 1      alterable;
+parameter real TETA_GAIN = 1 alterable;
+
+analog begin
+
+v(xd) <+  GAIN*(v(xa)*cos((2*pi*50*($abstime) + v(teta))*TETA_GAIN)           +
+                v(xb)*cos((2*pi*50*($abstime) + v(teta))*TETA_GAIN - 2*pi/3)  +
+                v(xc)*cos((2*pi*50*($abstime) + v(teta))*TETA_GAIN + 2*pi/3)) ;
+
+v(xq) <+ -GAIN*(v(xa)*sin((2*pi*50*($abstime) + v(teta))*TETA_GAIN)           +
+                v(xb)*sin((2*pi*50*($abstime) + v(teta))*TETA_GAIN - 2*pi/3)  +
+                v(xc)*sin((2*pi*50*($abstime) + v(teta))*TETA_GAIN + 2*pi/3));
+
+
+//v(x0) <+  GAIN*0.5*(v(xa)+v(xb)+v(xc));
+
+end
+
+endmodule
+
+
